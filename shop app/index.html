@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Shop | Real-Time Attendance</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="application-name" content="NeonShop">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            /* Neon Palette */
+            --bg-color: #050505;
+            --card-bg: #0f0f0f;
+            --text-main: #ffffff;
+            --text-muted: #666666;
+            --neon-green: #00ff9d;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff0055;
+            --neon-purple: #bc13fe;
+            
+            /* Dimensions */
+            --header-height: 60px;
+        }
+
+        /* --- PLATFORM DETECTION VARIABLES (Defaults) --- */
+        :root {
+            --radius-card: 16px;
+            --radius-btn: 12px;
+            --font-main: 'Inter', sans-serif;
+            --font-mono: 'Orbitron', monospace; /* For numbers/time */
+            --shadow: 0 4px 20px rgba(0, 243, 255, 0.05);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* iOS Specifics */
+        body.ios {
+            --radius-card: 20px;
+            --radius-btn: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body.ios button { font-weight: 600; }
+        body.ios .card { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: rgba(20,20,20,0.85); border: 1px solid rgba(255,255,255,0.1); }
+
+        /* Android Specifics */
+        body.android {
+            --radius-card: 0px; /* Material style often flat or 4px */
+            --radius-btn: 4px;
+            font-family: 'Roboto', sans-serif;
+            --shadow: 0 2px 8px rgba(0,0,0,0.5); /* Material elevation */
+        }
+        body.android .card { background: #1c1c1c; border: 1px solid #333; border-left: 4px solid var(--neon-blue); }
+        body.android button { text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- RESET & LAYOUT --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            overflow-x: hidden;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; width: 100%; }
+        .hidden { display: none !important; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+        
+        /* --- TYPOGRAPHY --- */
+        h1, h2, h3 { font-weight: 700; margin-bottom: 10px; }
+        .text-mono { font-family: var(--font-mono); letter-spacing: 1px; }
+        .text-green { color: var(--neon-green); text-shadow: 0 0 8px rgba(0,255,157,0.5); }
+        .text-blue { color: var(--neon-blue); text-shadow: 0 0 8px rgba(0,243,255,0.5); }
+        .text-pink { color: var(--neon-pink); text-shadow: 0 0 8px rgba(255,0,85,0.5); }
+
+        /* --- UI COMPONENTS --- */
+        header {
+            position: sticky; top: 0; z-index: 100;
+            height: var(--header-height);
+            background: rgba(5, 5, 5, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-card);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Neon Borders */
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+            opacity: 0.5;
+        }
+
+        /* Buttons */
+        button {
+            width: 100%; padding: 16px;
+            border: none; border-radius: var(--radius-btn);
+            font-size: 1rem; font-weight: bold;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: var(--transition);
+            margin-bottom: 12px;
+        }
+        
+        .btn-in { background: rgba(0, 255, 157, 0.1); color: var(--neon-green); border: 1px solid var(--neon-green); }
+        .btn-in:active { background: var(--neon-green); color: #000; }
+        
+        .btn-out { background: rgba(255, 0, 85, 0.1); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
+        .btn-out:active { background: var(--neon-pink); color: #fff; }
+        
+        .btn-primary { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
+        .btn-secondary { background: #222; color: #fff; }
+
+        /* Inputs */
+        input, select {
+            width: 100%; padding: 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333;
+            border-radius: var(--radius-btn);
+            color: #fff; font-size: 1rem; margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+        input:focus { border-color: var(--neon-blue); }
+
+        /* Login Screen */
+        #login-screen { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; text-align: center; }
+        .brand-logo { font-size: 3rem; color: var(--neon-purple); margin-bottom: 20px; text-shadow: 0 0 20px var(--neon-purple); animation: pulse 3s infinite; }
+
+        /* Live Dashboard Stats */
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+        .stat-label { color: var(--text-muted); font-size: 0.9rem; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; }
+        
+        .big-timer { font-size: 3.5rem; text-align: center; font-family: var(--font-mono); color: #fff; margin: 20px 0; line-height: 1; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .salary-counter { text-align: center; font-size: 2rem; color: var(--neon-blue); font-family: var(--font-mono); margin-bottom: 30px; }
+
+        /* Employee List (Admin) */
+        .emp-card {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: var(--radius-btn);
+            border-left: 3px solid var(--neon-purple);
+            cursor: pointer;
+        }
+
+        /* Floating Action Button (Android) */
+        .fab {
+            position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
+            border-radius: 50%; background: var(--neon-purple); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; box-shadow: 0 4px 15px rgba(188, 19, 254, 0.5);
+            z-index: 90;
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 200;
+            display: flex; justify-content: center; align-items: flex-end;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal.active { opacity: 1; pointer-events: all; }
+        .modal-content {
+            background: #141414; width: 100%; max-width: 600px;
+            padding: 25px; border-top: 2px solid var(--neon-blue);
+            border-radius: 25px 25px 0 0; max-height: 85vh; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .modal.active .modal-content { transform: translateY(0); }
+        @media(min-width: 600px) {
+            .modal { align-items: center; }
+            .modal-content { border-radius: 20px; width: 90%; }
+        }
+
+        /* Animations */
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; text-shadow: 0 0 30px var(--neon-purple); } 100% { opacity: 0.8; } }
+        
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 12px 24px; border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #444;
+            font-size: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 300;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-screen">
+        <div class="brand-logo"><i class="fa-solid fa-store"></i></div>
+        <h2 class="text-blue" style="letter-spacing: 2px;">NEON SHOP</h2>
+        <p style="color: #666; margin-bottom: 40px;">Attendance & Salary System</p>
+        
+        <form id="login-form" style="width: 100%; max-width: 320px;">
+            <input type="text" id="username" placeholder="Username" autocomplete="off">
+            <input type="password" id="password" placeholder="Password">
+            <button type="submit" class="btn-primary">LOGIN</button>
+        </form>
+    </section>
+
+    <!-- ADMIN DASHBOARD -->
+    <section id="admin-dashboard" class="hidden">
+        <header>
+            <h3 class="text-mono">ADMIN PANEL</h3>
+            <div onclick="app.logout()" style="cursor: pointer; color: var(--neon-pink);"><i class="fa-solid fa-power-off"></i></div>
+        </header>
+
+        <div class="container">
+            <div class="card">
+                <h4 style="margin-bottom: 15px;">Employees</h4>
+                <div id="employee-list"></div>
+                <div class="fab" onclick="app.openModal('add-emp-modal')"><i class="fa-solid fa-plus"></i></div>
+            </div>
+
+            <!-- WHATSAPP SIMULATOR (Since we don't have a backend server) -->
+            <div class="card" style="border: 1px dashed var(--neon-green);">
+                <h4 class="text-green" style="margin-bottom: 10px;"><i class="fa-brands fa-whatsapp"></i> WhatsApp Webhook Simulator</h4>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">Simulate incoming messages to test auto-attendance.</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" id="wa-phone" placeholder="Phone (e.g. 077...)" style="margin-bottom: 0;">
+                    <input type="text" id="wa-msg" placeholder="Msg: IN, OUT, In 8.00" style="margin-bottom: 0;">
+                </div>
+                <button class="btn-in" style="margin-top: 10px;" onclick="app.simulateWebhook()">
+                    <i class="fa-solid fa-paper-plane"></i> Send Message
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- EMPLOYEE DASHBOARD -->
+    <section id="employee-dashboard" class="hidden">
+        <header>
+            <h3 id="emp-name-display">EMPLOYEE</h3>
+            <div onclick="app.logout()" style="cursor: pointer; color: var(--neon-pink);"><i class="fa-solid fa-power-off"></i></div>
+        </header>
+
+        <div class="container">
+            <!-- Live Clock & Action -->
+            <div class="card" style="text-align: center;">
+                <div id="live-clock" class="text-mono" style="color: #888; margin-bottom: 20px;">00:00:00</div>
+                
+                <div id="timer-display" class="big-timer">00:00:00</div>
+                <div class="salary-counter text-mono" id="salary-display">LKR 0.00</div>
+
+                <div id="action-area">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- Daily Stats -->
+            <div class="card">
+                <h4 class="text-blue" style="margin-bottom: 15px;">Today's Summary</h4>
+                <div class="stat-row">
+                    <span class="stat-label">Worked Time</span>
+                    <span class="stat-value text-mono" id="stat-worked">0s</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">OT Time</span>
+                    <span class="stat-value text-mono text-pink" id="stat-ot">0s</span>
+                </div>
+                <div class="stat-row" style="border-bottom: none;">
+                    <span class="stat-label">Daily Salary</span>
+                    <span class="stat-value text-mono text-green" id="stat-salary">LKR 0.00</span>
+                </div>
+            </div>
+
+            <!-- Monthly Summary -->
+            <div class="card">
+                <h4 class="text-purple" style="margin-bottom: 15px; color: var(--neon-purple);">Monthly Total</h4>
+                <div style="font-size: 2rem; text-align: center; color: #fff;" class="text-mono" id="month-total">LKR 0.00</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODALS -->
+    <!-- Add Employee Modal -->
+    <div id="add-emp-modal" class="modal">
+        <div class="modal-content">
+            <h3>Add Employee</h3>
+            <form id="add-emp-form" style="margin-top: 20px;">
+                <input type="text" id="new-name" placeholder="Full Name" required>
+                <input type="text" id="new-user" placeholder="Username" required>
+                <input type="password" id="new-pass" placeholder="Password" required>
+                <input type="text" id="new-phone" placeholder="Phone (for WhatsApp)" required>
+                <label style="color:#888; font-size:0.8rem;">Daily Basic Salary (LKR)</label>
+                <input type="number" id="new-salary" placeholder="e.g. 2500" required>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="app.closeModal('add-emp-modal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employee Details Modal -->
+    <div id="details-modal" class="modal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between;">
+                <h3 id="det-name">Name</h3>
+                <i class="fa-solid fa-trash text-pink" style="cursor:pointer;" onclick="app.deleteEmployee()"></i>
+            </div>
+            <p id="det-user" style="color: #666; margin-bottom: 15px;">@username</p>
+            
+            <div style="background: #000; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-family: monospace;">
+                <div>Pass: <span id="det-pass" class="text-blue">***</span></div>
+                <div>Phone: <span id="det-phone">-</span></div>
+                <div>Daily Rate: <span id="det-rate" class="text-green">LKR 0</span></div>
+            </div>
+
+            <h4 style="border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">History (Seconds Accurate)</h4>
+            <div id="history-list" style="max-height: 250px; overflow-y: auto;">
+                <!-- History items -->
+            </div>
+            <button class="btn-secondary" style="margin-top: 20px;" onclick="app.closeModal('details-modal')">Close</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast">Notification</div>
+
+    <script>
+        /**
+         * APP LOGIC - Real-time Second Based Calculation
+         */
+        const app = {
+            data: {
+                users: [],
+                attendance: [],
+                currentUser: null
+            },
+            config: {
+                standardWorkSeconds: 8 * 60 * 60, // 8 hours
+                otRateMultiplier: 1.5
+            },
+            state: {
+                timerInterval: null
+            },
+
+            init() {
+                this.loadData();
+                this.detectPlatform();
+                this.startClock();
+                
+                // Restore session
+                const sess = sessionStorage.getItem('currentUser');
+                if (sess) {
+                    this.data.currentUser = JSON.parse(sess);
+                    this.route();
+                } else {
+                    this.showSection('login-screen');
+                }
+
+                // Listeners
+                document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); this.login(); };
+                document.getElementById('add-emp-form').onsubmit = (e) => { e.preventDefault(); this.addEmployee(); };
+            },
+
+            /* --- DATA & STATE --- */
+            loadData() {
+                const users = localStorage.getItem('ns_users');
+                const att = localStorage.getItem('ns_attendance');
+                
+                if (users) this.data.users = JSON.parse(users);
+                else {
+                    // Seed Admin
+                    this.data.users = [{
+                        id: 1, name: "Admin", username: "admin", password: this.hash("admin123"),
+                        role: "admin", salary: 0, phone: "0000000000"
+                    }];
+                    this.saveData();
+                }
+                if (att) this.data.attendance = JSON.parse(att);
+            },
+
+            saveData() {
+                localStorage.setItem('ns_users', JSON.stringify(this.data.users));
+                localStorage.setItem('ns_attendance', JSON.stringify(this.data.attendance));
+            },
+
+            /* --- AUTH --- */
+            hash(str) {
+                let h = 0;
+                for(let i=0; i<str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+                return h;
+            },
+
+            login() {
+                const u = document.getElementById('username').value;
+                const p = document.getElementById('password').value;
+                const user = this.data.users.find(x => x.username === u && x.password === this.hash(p));
+
+                if (user) {
+                    this.data.currentUser = user;
+                    sessionStorage.setItem('currentUser', JSON.stringify(user));
+                    this.route();
+                    this.showToast(`Welcome ${user.name}`);
+                } else {
+                    this.showToast("Invalid Credentials");
+                }
+            },
+
+            logout() {
+                this.data.currentUser = null;
+                sessionStorage.removeItem('currentUser');
+                clearInterval(this.state.timerInterval);
+                this.showSection('login-screen');
+            },
+
+            route() {
+                if (this.data.currentUser.role === 'admin') {
+                    this.renderAdmin();
+                    this.showSection('admin-dashboard');
+                } else {
+                    this.renderEmployee();
+                    this.showSection('employee-dashboard');
+                }
+            },
+
+            /* --- SALARY CALCULATION ENGINE --- */
+            calculateSalary(secondsWorked, dailyBasicSalary) {
+                // Rate per second based on standard 8 hours
+                // If Daily Salary is 2500, Standard is 28800s. Rate = 2500/28800 per second.
+                const ratePerSecond = dailyBasicSalary / this.config.standardWorkSeconds;
+                
+                let normalSeconds = secondsWorked;
+                let otSeconds = 0;
+                
+                // Determine OT
+                if (secondsWorked > this.config.standardWorkSeconds) {
+                    normalSeconds = this.config.standardWorkSeconds;
+                    otSeconds = secondsWorked - this.config.standardWorkSeconds;
+                }
+
+                const normalPay = normalSeconds * ratePerSecond;
+                const otPay = otSeconds * ratePerSecond * this.config.otRateMultiplier;
+                
+                return {
+                    totalPay: normalPay + otPay,
+                    otPay: otPay,
+                    normalPay: normalPay,
+                    otSeconds: otSeconds
+                };
+            },
+
+            formatTime(totalSeconds) {
+                const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+                const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+                return `${h}:${m}:${s}`;
+            },
+
+            formatMoney(amount) {
+                return 'LKR ' + amount.toFixed(2);
+            },
+
+            /* --- EMPLOYEE LOGIC --- */
+            renderEmployee() {
+                const user = this.data.currentUser;
+                document.getElementById('emp-name-display').innerText = user.name;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const record = this.data.attendance.find(r => r.userId === user.id && r.date === today);
+                const actionArea = document.getElementById('action-area');
+
+                if (!record) {
+                    actionArea.innerHTML = `<button class="btn-in" onclick="app.clockIn()"><i class="fa-solid fa-play"></i> CLOCK IN</button>`;
+                    this.resetLiveDisplay();
+                } else if (record && !record.outTime) {
+                    // Active Session
+                    actionArea.innerHTML = `<button class="btn-out" onclick="app.clockOut()"><i class="fa-solid fa-stop"></i> CLOCK OUT</button>`;
+                    this.startLiveCounter(record.inTime, user.salary);
+                } else {
+                    // Completed
+                    actionArea.innerHTML = `<button class="btn-secondary" disabled>Day Completed</button>`;
+                    const calc = this.calculateSalary(record.workedSeconds, user.salary);
+                    this.updateLiveUI(record.workedSeconds, calc.totalPay, calc.otSeconds);
+                    this.stopLiveCounter();
+                }
+
+                this.updateMonthStats(user);
+            },
+
+            clockIn() {
+                const now = Date.now();
+                const record = {
+                    userId: this.data.currentUser.id,
+                    date: new Date().toISOString().split('T')[0],
+                    inTime: now,
+                    outTime: null,
+                    workedSeconds: 0,
+                    otSeconds: 0,
+                    salary: 0
+                };
+                this.data.attendance.push(record);
+                this.saveData();
+                this.renderEmployee();
+                this.showToast("Clocked In");
+            },
+
+            clockOut() {
+                const now = Date.now();
+                const today = new Date().toISOString().split('T')[0];
+                const record = this.data.attendance.find(r => r.userId === this.data.currentUser.id && r.date === today);
+                
+                if (record) {
+                    record.outTime = now;
+                    record.workedSeconds = Math.floor((now - record.inTime) / 1000);
+                    
+                    const calc = this.calculateSalary(record.workedSeconds, this.data.currentUser.salary);
+                    record.otSeconds = calc.otSeconds;
+                    record.salary = calc.totalPay;
+                    
+                    this.saveData();
+                    this.renderEmployee();
+                    this.showToast("Clocked Out");
+                }
+            },
+
+            /* --- REAL-TIME DISPLAY --- */
+            startLiveCounter(startTime, dailyRate) {
+                if(this.state.timerInterval) clearInterval(this.state.timerInterval);
+                
+                const update = () => {
+                    const now = Date.now();
+                    const diff = Math.floor((now - startTime) / 1000);
+                    const calc = this.calculateSalary(diff, dailyRate);
+                    this.updateLiveUI(diff, calc.totalPay, calc.otSeconds);
+                };
+                
+                update(); // immediate
+                this.state.timerInterval = setInterval(update, 1000); // every second
+            },
+
+            stopLiveCounter() {
+                if(this.state.timerInterval) clearInterval(this.state.timerInterval);
+            },
+
+            updateLiveUI(seconds, salary, otSecs) {
+                document.getElementById('timer-display').innerText = this.formatTime(seconds);
+                document.getElementById('salary-display').innerText = this.formatMoney(salary);
+                document.getElementById('stat-worked').innerText = this.formatTime(seconds);
+                document.getElementById('stat-ot').innerText = otSecs > 0 ? this.formatTime(otSecs) : '0s';
+                document.getElementById('stat-salary').innerText = this.formatMoney(salary);
+            },
+
+            resetLiveDisplay() {
+                document.getElementById('timer-display').innerText = "00:00:00";
+                document.getElementById('salary-display').innerText = "LKR 0.00";
+                document.getElementById('stat-worked').innerText = "0s";
+                document.getElementById('stat-ot').innerText = "0s";
+                document.getElementById('stat-salary').innerText = "LKR 0.00";
+            },
+
+            updateMonthStats(user) {
+                let total = 0;
+                const now = new Date();
+                this.data.attendance.forEach(r => {
+                    if (r.userId === user.id) {
+                        const d = new Date(r.date);
+                        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                            total += r.salary;
+                        }
+                    }
+                });
+                document.getElementById('month-total').innerText = this.formatMoney(total);
+            },
+
+            /* --- ADMIN LOGIC --- */
+            renderAdmin() {
+                const list = document.getElementById('employee-list');
+                list.innerHTML = '';
+                this.data.users.filter(u => u.role !== 'admin').forEach(u => {
+                    const el = document.createElement('div');
+                    el.className = 'emp-card';
+                    el.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold; color:#fff;">${u.name}</div>
+                            <div style="font-size:0.8rem; color:#666;">${u.username} | ${this.formatMoney(u.salary)}/day</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right" style="color:#444;"></i>
+                    `;
+                    el.onclick = () => this.viewEmployee(u);
+                    list.appendChild(el);
+                });
+            },
+
+            addEmployee() {
+                const name = document.getElementById('new-name').value;
+                const user = document.getElementById('new-user').value;
+                const pass = document.getElementById('new-pass').value;
+                const phone = document.getElementById('new-phone').value;
+                const salary = parseFloat(document.getElementById('new-salary').value);
+
+                if(!name || !user || !pass || isNaN(salary)) return;
+
+                this.data.users.push({
+                    id: Date.now(),
+                    name, username: user, password: this.hash(pass), 
+                    role: 'employee', salary, phone
+                });
+                this.saveData();
+                this.renderAdmin();
+                this.closeModal('add-emp-modal');
+                document.getElementById('add-emp-form').reset();
+                this.showToast("Employee Added");
+            },
+
+            viewEmployee(u) {
+                this.currentViewId = u.id;
+                document.getElementById('det-name').innerText = u.name;
+                document.getElementById('det-user').innerText = '@' + u.username;
+                document.getElementById('det-pass').innerText = u.password; // Showing hash for demo
+                document.getElementById('det-phone').innerText = u.phone;
+                document.getElementById('det-rate').innerText = this.formatMoney(u.salary);
+
+                const hist = document.getElementById('history-list');
+                hist.innerHTML = '';
+                
+                const recs = this.data.attendance.filter(r => r.userId === u.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+                
+                recs.forEach(r => {
+                    const row = document.createElement('div');
+                    row.style.cssText = "display:flex; justify-content:space-between; border-bottom:1px solid #222; padding:8px 0; font-size:0.85rem;";
+                    const status = r.outTime ? '<span class="text-green">Done</span>' : '<span class="text-pink">Active</span>';
+                    row.innerHTML = `
+                        <div>
+                            <div style="color:#aaa;">${r.date}</div>
+                            <div>${new Date(r.inTime).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'})} - ${r.outTime ? new Date(r.outTime).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}) : '...'}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div>${this.formatMoney(r.salary)}</div>
+                            <div>${status}</div>
+                        </div>
+                    `;
+                    hist.appendChild(row);
+                });
+
+                this.openModal('details-modal');
+            },
+
+            deleteEmployee() {
+                if(confirm("Delete this employee?")) {
+                    this.data.users = this.data.users.filter(u => u.id !== this.currentViewId);
+                    this.data.attendance = this.data.attendance.filter(a => a.userId !== this.currentViewId);
+                    this.saveData();
+                    this.renderAdmin();
+                    this.closeModal('details-modal');
+                }
+            },
+
+            /* --- WHATSAPP WEBHOOK SIMULATION --- */
+            simulateWebhook() {
+                const phone = document.getElementById('wa-phone').value.trim();
+                const msg = document.getElementById('wa-msg').value.trim().toLowerCase();
+
+                if(!phone || !msg) return this.showToast("Enter phone and message");
+
+                const user = this.data.users.find(u => u.phone === phone);
+                if(!user) return this.showToast("User with this phone not found");
+
+                // Parse Message: "in", "out", "in 8.00", "out 5.30"
+                const today = new Date().toISOString().split('T')[0];
+                let existing = this.data.attendance.find(r => r.userId === user.id && r.date === today);
+
+                // Time Extraction Regex (8.00 or 8:00)
+                const timeMatch = msg.match(/(\d{1,2})[:.](\d{2})/);
+                let targetTime = Date.now();
+
+                if (timeMatch) {
+                    const h = parseInt(timeMatch[1]);
+                    const m = parseInt(timeMatch[2]);
+                    const d = new Date();
+                    d.setHours(h, m, 0, 0);
+                    targetTime = d.getTime();
+                    // Handle logic if time is in future/past relative to current hour logic simply for this demo
+                }
+
+                if (msg.includes('in')) {
+                    if (existing && !existing.outTime) return this.showToast("Already clocked in today.");
+                    if (existing && existing.outTime) return this.showToast("Day already completed.");
+
+                    // Create new
+                    this.data.attendance.push({
+                        userId: user.id, date: today,
+                        inTime: targetTime, outTime: null,
+                        workedSeconds: 0, otSeconds: 0, salary: 0
+                    });
+                    this.showToast(`WA: ${user.name} Clocked IN`);
+                } 
+                else if (msg.includes('out')) {
+                    if (!existing) return this.showToast("No active session found for IN.");
+                    if (existing.outTime) return this.showToast("Already clocked out.");
+
+                    existing.outTime = targetTime;
+                    existing.workedSeconds = Math.floor((targetTime - existing.inTime) / 1000);
+                    const calc = this.calculateSalary(existing.workedSeconds, user.salary);
+                    existing.otSeconds = calc.otSeconds;
+                    existing.salary = calc.totalPay;
+                    
+                    this.showToast(`WA: ${user.name} Clocked OUT`);
+                }
+
+                this.saveData();
+                document.getElementById('wa-phone').value = '';
+                document.getElementById('wa-msg').value = '';
+            },
+
+            /* --- UTILS --- */
+            showSection(id) {
+                document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+                document.getElementById(id).classList.remove('hidden');
+            },
+            
+            openModal(id) { document.getElementById(id).classList.add('active'); },
+            closeModal(id) { document.getElementById(id).classList.remove('active'); },
+
+            startClock() {
+                setInterval(() => {
+                    const now = new Date();
+                    document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+                }, 1000);
+            },
+
+            detectPlatform() {
+                const ua = navigator.userAgent;
+                if (/android/i.test(ua)) document.body.classList.add('android');
+                else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) document.body.classList.add('ios');
+            },
+
+            showToast(msg) {
+                const t = document.getElementById('toast');
+                t.innerText = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
